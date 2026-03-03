@@ -1,0 +1,2885 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gantt + Dashboard de Entregables</title>
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --card: #ffffff;
+      --line: #d7e0ea;
+      --text: #1f2937;
+      --muted: #64748b;
+      --ok-bg: #d1fae5;
+      --ok-border: #16a34a;
+      --late-bg: #fee2e2;
+      --late-border: #dc2626;
+      --pending-bg: #f8fafc;
+      --accent: #0f766e;
+      --blue: #1d4ed8;
+      --amber: #d97706;
+      --violet: #7c3aed;
+      --status-no: #ef4444;
+      --status-progress: #f59e0b;
+      --status-done: #16a34a;
+      --table-header-bg: #edf3fa;
+      --sticky-school-bg: #f7fbff;
+      --sticky-course-bg: #f8fbff;
+      --topbar-bg: #f8fbff;
+      --panel-bg: #ffffff;
+      --base-font-size: 14px;
+      --ui-radius: 10px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 18px;
+      background: linear-gradient(140deg, #edf3fb 0%, #f8fafd 100%);
+      color: var(--text);
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      font-size: var(--base-font-size);
+    }
+
+    .app {
+      max-width: 2000px;
+      margin: 0 auto;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 8px 26px rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+    }
+
+    .topbar {
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      background: var(--topbar-bg);
+    }
+
+    .title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      outline: none;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .topbar-right {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .profile-badge {
+      margin-bottom: 10px;
+      display: inline-block;
+      border: 1px solid var(--line);
+      background: #f8fbff;
+      color: #0f766e;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .tab-btn {
+      border: 1px solid #c3d2e2;
+      background: #fff;
+      color: #1e293b;
+      border-radius: var(--ui-radius);
+      padding: 7px 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .tab-btn.active {
+      background: #0f766e;
+      color: #fff;
+      border-color: #0f766e;
+    }
+
+    .sheet {
+      display: none;
+      padding: 14px;
+    }
+
+    .sheet.active { display: block; }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .field {
+      border: 1px solid var(--line);
+      border-radius: var(--ui-radius);
+      padding: 8px;
+      background: #fbfdff;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.76rem;
+      color: var(--muted);
+      margin-bottom: 5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      padding: 7px;
+      border: 1px solid #c8d5e3;
+      border-radius: calc(var(--ui-radius) - 2px);
+      font: inherit;
+      color: #0f172a;
+    }
+
+    .summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .sync-panel {
+      display: grid;
+      grid-template-columns: 1.4fr 1.6fr 1fr auto auto;
+      gap: 10px;
+      margin-bottom: 12px;
+      align-items: end;
+    }
+
+    .sync-status {
+      border: 1px solid var(--line);
+      border-radius: var(--ui-radius);
+      background: #fbfdff;
+      padding: 8px 10px;
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 0.86rem;
+      background: #f8fbff;
+      font-weight: 600;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--ui-radius);
+      max-height: 70vh;
+    }
+
+    .export-btn {
+      border: 1px solid #c3d2e2;
+      background: #fff;
+      color: #1e293b;
+      border-radius: calc(var(--ui-radius) - 2px);
+      padding: 7px 12px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.82rem;
+    }
+
+    .reset-data-btn {
+      border: 1px solid #dc2626;
+      background: #fff;
+      color: #b91c1c;
+      border-radius: calc(var(--ui-radius) - 2px);
+      padding: 7px 12px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.82rem;
+    }
+
+    .fit-btn {
+      border: 1px solid #c3d2e2;
+      background: #fff;
+      color: #1e293b;
+      border-radius: calc(var(--ui-radius) - 2px);
+      padding: 7px 12px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.82rem;
+    }
+
+    .fit-btn.active {
+      background: #0f766e;
+      color: #fff;
+      border-color: #0f766e;
+    }
+
+    .sync-btn {
+      border: 1px solid #0f766e;
+      background: #0f766e;
+      color: #fff;
+      border-radius: calc(var(--ui-radius) - 2px);
+      padding: 7px 12px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.82rem;
+    }
+
+    .sync-btn.secondary {
+      background: #fff;
+      color: #0f766e;
+    }
+
+    table {
+      border-collapse: collapse;
+      min-width: 2760px;
+      width: 100%;
+      background: #fff;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      text-align: center;
+      padding: 6px;
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      background: var(--table-header-bg);
+    }
+
+    .sticky-product {
+      position: sticky;
+      left: 0;
+      z-index: 4;
+      background: var(--sticky-school-bg);
+      min-width: 120px;
+      text-align: left;
+      padding-left: 10px;
+      font-weight: 700;
+    }
+
+    .sticky-school {
+      position: sticky;
+      left: 120px;
+      z-index: 4;
+      background: var(--sticky-school-bg);
+      min-width: 170px;
+      text-align: left;
+      padding-left: 10px;
+      font-weight: 700;
+    }
+
+    .sticky-course {
+      position: sticky;
+      left: 290px;
+      z-index: 4;
+      background: var(--sticky-course-bg);
+      min-width: 300px;
+      max-width: 360px;
+      text-align: left;
+      padding-left: 10px;
+      font-weight: 600;
+    }
+
+    .sticky-date {
+      position: sticky;
+      left: 590px;
+      z-index: 4;
+      background: var(--sticky-course-bg);
+      min-width: 145px;
+      max-width: 165px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .sticky-counter {
+      position: sticky;
+      left: 735px;
+      z-index: 4;
+      background: var(--sticky-course-bg);
+      min-width: 110px;
+      max-width: 120px;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .product-type-select {
+      width: 100%;
+      border: 1px solid #c8d5e3;
+      border-radius: calc(var(--ui-radius) - 2px);
+      padding: 5px 6px;
+      font: inherit;
+      background: #fff;
+      color: #0f172a;
+    }
+
+    .school-name,
+    .course-name {
+      width: 100%;
+      border: 1px dashed transparent;
+      border-radius: 6px;
+      padding: 3px 4px;
+      outline: none;
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .course-date-input {
+      width: 130px;
+      border: 1px solid #c8d5e3;
+      border-radius: calc(var(--ui-radius) - 2px);
+      padding: 5px 6px;
+      font: inherit;
+      background: #fff;
+      color: #0f172a;
+    }
+
+    .school-name:focus,
+    .course-name:focus {
+      border-color: #94a3b8;
+      background: #fff;
+    }
+
+    .week-header {
+      min-width: 96px;
+    }
+
+    .week-header .wk {
+      font-weight: 700;
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .week-header .date {
+      color: var(--muted);
+      font-size: 0.72rem;
+      display: block;
+      margin-top: 2px;
+    }
+
+    .week-real {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 3px;
+      font-weight: 700;
+    }
+
+    .meta-input {
+      width: 62px;
+      border: 1px solid #c8d5e3;
+      border-radius: calc(var(--ui-radius) - 4px);
+      padding: 2px 4px;
+      font-size: 0.78rem;
+      text-align: center;
+      margin-top: 3px;
+    }
+
+    .cell { background: var(--pending-bg); }
+    .cell.done { background: var(--ok-bg); border-color: var(--ok-border); }
+    .cell.partial { background: #fef3c7; border-color: #f59e0b; }
+    .cell.none { background: var(--late-bg); border-color: var(--late-border); }
+    .cell.inactive {
+      background: #eef2f7;
+      color: #94a3b8;
+    }
+
+    .cell-inputs {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .real-input {
+      width: 40px;
+      border: 1px solid #c8d5e3;
+      border-radius: 6px;
+      padding: 1px 3px;
+      font-size: 0.72rem;
+      text-align: center;
+      background: #fff;
+      color: #111827;
+    }
+
+    .target-input {
+      width: 40px;
+      border: 1px solid #c8d5e3;
+      border-radius: 6px;
+      padding: 1px 3px;
+      font-size: 0.72rem;
+      text-align: center;
+      background: #f8fafc;
+      color: #111827;
+    }
+
+    input[type="checkbox"] { transform: scale(1.05); cursor: pointer; }
+
+    .total-col,
+    .percent-col {
+      font-weight: 700;
+      min-width: 120px;
+    }
+
+    .percent-col.good { background: var(--ok-bg); }
+    .percent-col.mid { background: #fff7ed; }
+    .percent-col.low { background: var(--late-bg); }
+
+    .week-total { font-weight: 700; background: #f8fbff; }
+    .week-total.ok { background: var(--ok-bg); }
+    .week-total.late { background: var(--late-bg); }
+
+    .add-row {
+      display: grid;
+      grid-template-columns: 1.1fr 1.1fr 2fr auto;
+      gap: 8px;
+      padding: 10px;
+      border: 1px dashed #c3d2e2;
+      border-radius: var(--ui-radius);
+      margin-top: 12px;
+      background: #fbfdff;
+      align-items: end;
+    }
+
+    .add-row button {
+      border: 1px solid #0f766e;
+      background: #0f766e;
+      color: #fff;
+      border-radius: calc(var(--ui-radius) - 2px);
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .delete-btn {
+      border: 1px solid #dc2626;
+      background: #fff;
+      color: #b91c1c;
+      border-radius: 8px;
+      padding: 5px 8px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.76rem;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .dashboard-filters {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(180px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .kpi {
+      background: #fbfdff;
+      border: 1px solid var(--line);
+      border-radius: var(--ui-radius);
+      padding: 12px;
+    }
+
+    .kpi .label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      font-weight: 700;
+    }
+
+    .kpi .value {
+      margin-top: 6px;
+      font-size: 1.25rem;
+      font-weight: 800;
+    }
+
+    .charts {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 12px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--ui-radius);
+      background: var(--panel-bg);
+      padding: 12px;
+      min-height: 220px;
+    }
+
+    .panel h3 {
+      margin: 0 0 10px;
+      font-size: 0.95rem;
+    }
+
+    .bar-list {
+      display: grid;
+      gap: 7px;
+      max-height: 350px;
+      overflow: auto;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 70px;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+    }
+
+    .bar-track {
+      height: 10px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--blue), #3b82f6);
+      width: 0;
+    }
+
+    .school-rows {
+      display: grid;
+      gap: 8px;
+      max-height: 350px;
+      overflow: auto;
+    }
+
+    .school-row {
+      display: grid;
+      grid-template-columns: 180px 1fr 72px;
+      gap: 8px;
+      align-items: center;
+      font-size: 0.8rem;
+    }
+
+    .school-track {
+      height: 12px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .school-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--violet), #8b5cf6);
+      width: 0;
+    }
+
+    .heat-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(80px, 1fr));
+      gap: 8px;
+    }
+
+    .heat-card {
+      border: 1px solid var(--line);
+      border-radius: calc(var(--ui-radius) - 2px);
+      padding: 8px;
+      text-align: center;
+    }
+
+    .format-panel {
+      border: 1px solid var(--line);
+      border-radius: var(--ui-radius);
+      padding: 10px;
+      margin-bottom: 12px;
+      background: #fbfdff;
+    }
+
+    .format-title {
+      margin: 0 0 8px;
+      font-size: 0.86rem;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .format-grid {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(120px, 1fr));
+      gap: 8px;
+    }
+
+    .format-item label {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .format-item input[type="color"],
+    .format-item input[type="range"] {
+      width: 100%;
+    }
+
+    .format-actions {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .format-actions button {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: calc(var(--ui-radius) - 2px);
+      padding: 6px 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .format-panel.collapsed .format-grid,
+    .format-panel.collapsed .format-actions:not(.format-toggle-row) {
+      display: none;
+    }
+
+    .heat-card .name {
+      font-size: 0.72rem;
+      color: var(--muted);
+      min-height: 28px;
+    }
+
+    .heat-card .pct {
+      margin-top: 6px;
+      font-weight: 800;
+      font-size: 1rem;
+    }
+
+    .heat-card.low { background: #fee2e2; }
+    .heat-card.mid { background: #fff7ed; }
+    .heat-card.high { background: #d1fae5; }
+
+    .legend {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .scatter-wrap {
+      width: 100%;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: calc(var(--ui-radius) - 2px);
+      background: #fff;
+      padding: 8px;
+    }
+
+    .scatter-svg {
+      width: 100%;
+      min-width: 520px;
+      height: 270px;
+      display: block;
+    }
+
+    .scatter-legend {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .scatter-key {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .scatter-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    @media (max-width: 1300px) {
+      .controls { grid-template-columns: repeat(3, minmax(160px, 1fr)); }
+      .sync-panel { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+      .dashboard-filters { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
+      .format-grid { grid-template-columns: repeat(4, minmax(120px, 1fr)); }
+      .dashboard-grid { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
+      .charts { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 760px) {
+      body { padding: 8px; }
+      .controls { grid-template-columns: 1fr; }
+      .sync-panel { grid-template-columns: 1fr; }
+      .dashboard-filters { grid-template-columns: 1fr; }
+      .format-grid { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .add-row { grid-template-columns: 1fr; }
+      .sticky-product { min-width: 105px; }
+      .sticky-school { left: 105px; min-width: 130px; }
+      .sticky-course { left: 235px; min-width: 220px; }
+      .sticky-date { left: 455px; min-width: 120px; }
+      .sticky-counter { left: 575px; min-width: 90px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="title" contenteditable="true">Seguimiento de Cursos - Gantt y Dashboard</div>
+      <div class="topbar-right">
+        <div class="tabs">
+          <button class="tab-btn active" data-view="productor" data-target="ganttSheet">Perfil productor</button>
+          <button class="tab-btn" data-view="academico" data-target="ganttSheet">Perfil academico</button>
+          <button class="tab-btn" data-view="dashboard" data-target="dashboardSheet">Dashboard</button>
+        </div>
+        <button id="resetProfileBtn" class="reset-data-btn" type="button">Resetear metas y reales</button>
+        <button id="fitWeeksBtn" class="fit-btn active" type="button">Ajustar 15 semanas</button>
+        <button id="exportJpgBtn" class="export-btn" type="button">Exportar JPG</button>
+      </div>
+    </div>
+
+    <section id="ganttSheet" class="sheet active">
+      <div class="profile-badge" id="profileBadge">Vista activa: Perfil productor</div>
+      <div class="controls">
+        <div class="field">
+          <label for="startDate">Fecha Inicio</label>
+          <input id="startDate" type="date" />
+        </div>
+        <div class="field">
+          <label for="endDate">Fecha Final</label>
+          <input id="endDate" type="date" />
+        </div>
+        <div class="field">
+          <label for="searchSchool">Filtro escuela</label>
+          <select id="searchSchool"><option value="all">Todas</option></select>
+        </div>
+        <div class="field">
+          <label for="searchCourse">Filtro curso</label>
+          <input id="searchCourse" type="text" placeholder="Buscar por nombre" />
+        </div>
+        <div class="field">
+          <label for="statusFilter">Filtro estado</label>
+          <select id="statusFilter">
+            <option value="all">Todos</option>
+            <option value="no">Sin entrega (0%)</option>
+            <option value="progress">En progreso (1%-99%)</option>
+            <option value="done">Completos (>=100%)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="minPercent">M’nimo %</label>
+          <input id="minPercent" type="number" min="0" step="1" value="0" />
+        </div>
+        <div class="field">
+          <label for="productTypeFilter">Tipo de producto</label>
+          <select id="productTypeFilter">
+            <option value="all">Todos</option>
+            <option value="Grados">Grados</option>
+            <option value="ECV">ECV</option>
+            <option value="Lab Grados">Lab Grados</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Resumen plan</label>
+          <div id="planSummary" style="font-weight:700; padding-top:8px; color:#0f766e;">59 cursos | 15 semanas</div>
+        </div>
+      </div>
+
+      <div class="sync-panel">
+        <div class="field">
+          <label for="syncSupabaseUrl">Supabase URL</label>
+          <input id="syncSupabaseUrl" type="text" placeholder="https://TU-PROYECTO.supabase.co" value="https://ffqopubnqnmpnazcjdsr.supabase.co" />
+        </div>
+        <div class="field">
+          <label for="syncSupabaseKey">Supabase anon key</label>
+          <input id="syncSupabaseKey" type="password" placeholder="sb_publishable... o anon key" value="sb_publishable_g6UCGXIOg5jVbMiLQD633g_FYn-yj7b" />
+        </div>
+        <div class="field">
+          <label for="syncBoardId">Tablero compartido</label>
+          <input id="syncBoardId" type="text" placeholder="control-entregas" value="control-entregas" />
+        </div>
+        <button id="connectSyncBtn" class="sync-btn" type="button">Conectar sync</button>
+        <button id="syncNowBtn" class="sync-btn secondary" type="button">Subir ahora</button>
+      </div>
+      <div id="syncStatus" class="sync-status">Sync: solo localStorage</div>
+
+      <div class="format-panel" id="formatPanel">
+        <p class="format-title">Formato Editable (tabla + dashboard)</p>
+        <div class="format-actions format-toggle-row" style="margin-top:0; margin-bottom:8px; justify-content:flex-start;">
+          <button id="toggleFormatBtn" type="button">Ocultar formato</button>
+        </div>
+        <div class="format-grid">
+          <div class="format-item"><label for="fmtBg">Fondo app</label><input id="fmtBg" type="color" /></div>
+          <div class="format-item"><label for="fmtCard">Fondo tarjeta</label><input id="fmtCard" type="color" /></div>
+          <div class="format-item"><label for="fmtText">Texto</label><input id="fmtText" type="color" /></div>
+          <div class="format-item"><label for="fmtLine">Bordes</label><input id="fmtLine" type="color" /></div>
+          <div class="format-item"><label for="fmtHeader">Encabezado tabla</label><input id="fmtHeader" type="color" /></div>
+          <div class="format-item"><label for="fmtPanel">Panel dashboard</label><input id="fmtPanel" type="color" /></div>
+          <div class="format-item"><label for="fmtOk">Color entregado</label><input id="fmtOk" type="color" /></div>
+          <div class="format-item"><label for="fmtLate">Color retraso</label><input id="fmtLate" type="color" /></div>
+          <div class="format-item"><label for="fmtBar">Color barras</label><input id="fmtBar" type="color" /></div>
+          <div class="format-item"><label for="fmtSchoolBar">Color barras escuela</label><input id="fmtSchoolBar" type="color" /></div>
+          <div class="format-item"><label for="fmtStatusNo">LÕnea sin iniciar</label><input id="fmtStatusNo" type="color" /></div>
+          <div class="format-item"><label for="fmtStatusProgress">LÕnea en progreso</label><input id="fmtStatusProgress" type="color" /></div>
+          <div class="format-item"><label for="fmtStatusDone">LÕnea finalizados</label><input id="fmtStatusDone" type="color" /></div>
+          <div class="format-item"><label for="fmtFontSize">TamaÐo texto</label><input id="fmtFontSize" type="range" min="12" max="18" step="1" /></div>
+          <div class="format-item"><label for="fmtRadius">Redondeo</label><input id="fmtRadius" type="range" min="6" max="16" step="1" /></div>
+        </div>
+        <div class="format-actions">
+          <button id="resetFormatBtn" type="button">Restablecer formato</button>
+        </div>
+      </div>
+
+      <div class="summary">
+        <div class="pill" id="globalProgress">Entregado total: 0</div>
+        <div class="pill" id="globalTarget">Objetivo total: 0</div>
+        <div class="pill" id="globalPercent">Avance global: 0.00%</div>
+        <div class="pill" id="visibleCourses">Cursos visibles: 0</div>
+      </div>
+
+      <div id="tableWrap" class="table-wrap">
+        <table id="ganttTable">
+          <thead id="thead"></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="add-row">
+        <div class="field" style="margin:0;">
+          <label for="newProductType">Tipo de producto</label>
+          <select id="newProductType">
+            <option value="Grados">Grados</option>
+            <option value="ECV">ECV</option>
+            <option value="Lab Grados">Lab Grados</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0;">
+          <label for="newSchool">Nueva escuela</label>
+          <input id="newSchool" type="text" placeholder="Ej: Derecho" />
+        </div>
+        <div class="field" style="margin:0;">
+          <label for="newCourse">Nuevo curso</label>
+          <input id="newCourse" type="text" placeholder="Nombre del curso" />
+        </div>
+        <button id="addCourseBtn" type="button">Agregar curso</button>
+      </div>
+
+      <div class="legend">Rojo: real 0. Amarillo: real parcial. Verde: real completo (= meta). El check aplica valor parcial por defecto.</div>
+    </section>
+
+    <section id="dashboardSheet" class="sheet">
+      <div class="dashboard-filters">
+        <div class="field">
+          <label for="dashboardProfileFilter">Filtro perfil</label>
+          <select id="dashboardProfileFilter">
+            <option value="all">Todos</option>
+            <option value="productor">Perfil productor</option>
+            <option value="academico">Perfil academico</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="dashboardSchoolFilter">Filtro escuela</label>
+          <select id="dashboardSchoolFilter">
+            <option value="all">Todas</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="dashboardProductTypeFilter">Tipo de producto</label>
+          <select id="dashboardProductTypeFilter">
+            <option value="all">Todos</option>
+            <option value="Grados">Grados</option>
+            <option value="ECV">ECV</option>
+            <option value="Lab Grados">Lab Grados</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="dashboardCourseFilter">Filtro curso</label>
+          <input id="dashboardCourseFilter" type="text" placeholder="Buscar por nombre" />
+        </div>
+      </div>
+      <div class="dashboard-grid">
+        <div class="kpi"><div class="label">Cursos Visibles</div><div class="value" id="kpiCourses">0</div></div>
+        <div class="kpi"><div class="label">Entregables Totales</div><div class="value" id="kpiDelivered">0</div></div>
+        <div class="kpi"><div class="label">Objetivo Total</div><div class="value" id="kpiTarget">0</div></div>
+        <div class="kpi"><div class="label">Avance Global</div><div class="value" id="kpiPercent">0.00%</div></div>
+      </div>
+
+      <div class="charts">
+        <div class="panel">
+          <h3>Avance por Semana (entregables / objetivo)</h3>
+          <div id="weeklyBars" class="bar-list"></div>
+        </div>
+
+        <div class="panel">
+          <h3>Top 10 Cursos por % de Avance</h3>
+          <div id="topCoursesBars" class="bar-list"></div>
+        </div>
+
+        <div class="panel">
+          <h3>DispersiÑn por Estado de Cursos (S1-S15)</h3>
+          <div class="scatter-wrap">
+            <svg id="statusScatter" class="scatter-svg" viewBox="0 0 860 270" preserveAspectRatio="none"></svg>
+          </div>
+          <div class="scatter-legend">
+            <span class="scatter-key"><span class="scatter-dot" style="background: var(--status-no);"></span>Sin iniciar</span>
+            <span class="scatter-key"><span class="scatter-dot" style="background: var(--status-done);"></span>Finalizados</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Avance por Escuela</h3>
+          <div id="schoolBars" class="school-rows"></div>
+        </div>
+
+        <div class="panel">
+          <h3>Mapa de Calor de Escuelas (Top 15 por volumen)</h3>
+          <div id="schoolHeat" class="heat-grid"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script>
+    const TOTAL_WEEKS = 15;
+    const DEFAULT_WEEKLY_TARGET = new Array(TOTAL_WEEKS).fill(0);
+    const PRODUCT_TYPES = ['Grados', 'ECV', 'Lab Grados'];
+    const PRODUCT_TYPE_WEEKS = {
+      'Grados': 15,
+      'ECV': 4,
+      'Lab Grados': 15
+    };
+
+    const COURSE_NAMES = [
+      "ContrataciÑn Privada II", "ContrataciÑn Administrativa", "Derecho Procesal Administrativo", "Derecho Procesal Agrario",
+      "ResoluciÑn alterna de conflictos y Derecho Colaborativo", "Derecho Presupuestario y Tributario", "Procesos Sucesorios", "Derechos Humanos",
+      "Derecho Internacional", "Derecho Informàtico", "PsicologÕa del Aprendizaje", "Psicoterapia Infantil",
+      "PsicodiagnÑstico de la Persona Adulta", "IntroducciÑn a la PsicologÕa Industrial y Organizacional", "PrevenciÑn de la Violencia", "Dinàmica de Grupos",
+      "Psicoterapia de la Persona Adulta", "GestiÑn del Talento Humano en la Organizaciones", "PsicologÕa Ambiental", "InvestigaciÑn PsicolÑgica III: M?todos Cualitativos",
+      "M?tricas de desarrollo de Software (M?tricas de desarrollo de Programas Informàticos)", "Experiencia de Usuario en entornos web", "GeologÕa", "ConstrucciÑn I",
+      "Mecànica del SÑlido II", "Laboratorio de Mecànica de Suelos", "Mecànica de Suelos I", "Mecànica Estructural",
+      "Hidràulica", "Laboratorio de Hidràulica*", "HidrologÕa", "GestiÑn de Riesgo y calidad",
+      "Laboratorio de Circuitos El?ctricos *", "Sistemas ElectrÑnicos I", "Màquinas El?ctricas I", "Laboratorio de Màquinas El?ctricas I *",
+      "Modelado de Sistemas Dinàmicos", "Sistemas ElectrÑnicos II", "Laboratorio de Sistemas ElectrÑnicos *", "Sistemas Digitales I",
+      "AutomatizaciÑn Industrial", "Termodinàmica de Sistemas", "DiseÐo Asistido por Computador*", "IntroducciÑn al DiseÐo Mecànico",
+      "Màquinas Hidràulicas", "Transferencia de Calor", "Laboratorio Mecànico*", "Sistemas de Aire Acondicionado",
+      "IntroducciÑn a la Ciencia de Datos", "AutomatizaciÑn RobÑtica de Procesos", "Probabilidad y estadistica Inferencial (actualizaciÑn)", "AsesorÕa Fiscal",
+      "Laboratorio de  Contabilidad Aplicada"
+    ];
+
+    const SCHOOL_RAW = `
+Derecho
+Derecho
+Derecho
+Lic Derecho
+Lic Derecho
+Lic Derecho
+Lic Derecho
+Lic Derecho
+Lic Derecho
+Lic Derecho
+PsicologÕa
+PsicologÕa
+PsicologÕa
+PsicologÕa
+PsicologÕa
+PsicologÕa
+PsicologÕa
+PsicologÕa
+PsicologÕa
+PsicologÕa
+Desarrollo del Software
+Desarrollo del Software
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+El?ctrica
+El?ctrica
+El?ctrica
+El?ctrica
+El?ctrica
+El?ctrica
+El?ctrica
+El?ctrica
+El?ctrica
+Electromecànica
+Electromecànica
+Electromecànica
+Electromecànica
+Electromecànica
+Electromecànica
+Electromecànica
+Ciencia de Datos
+Ciencia de Datos
+Industrial
+Remozamiento de Curso ContadurÕa
+Remozamiento de Curso ContadurÕa
+EspecializaciÑn DiseÐo y Desarrollo Web
+EspecializaciÑn Big Data
+EspecializaciÑn Big Data
+Desarrollo de Realidad Virtual
+Desarrollo de Realidad Virtual
+Desarrollo de Realidad Virtual
+Lic Derecho
+Lic Derecho
+Lic Derecho
+Lic Derecho
+Lic Derecho
+Lic Derecho
+Lic Derecho
+PsicologÕa
+PsicologÕa
+PsicologÕa
+PsicologÕa
+PsicologÕa
+PsicologÕa
+PsicologÕa
+PsicologÕa
+PsicologÕa
+Desarrollo del Software
+Desarrollo del Software
+Desarrollo del Software
+Desarrollo del Software
+Desarrollo del Software
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+Civil
+El?ctrica
+El?ctrica
+El?ctrica
+El?ctrica
+El?ctrica
+El?ctrica
+El?ctrica
+El?ctrica
+El?ctrica
+Electromecànica
+Electromecànica
+Electromecànica
+Electromecànica
+Electromecànica
+Electromecànica
+Electromecànica
+Ciencia de Datos
+Desarrollo de Realidad Virtual
+Desarrollo de Realidad Virtual
+Desarrollo de Realidad Virtual
+Desarrollo de Realidad Virtual
+Desarrollo de Realidad Virtual
+Sostenibilidad Ambiental
+Sostenibilidad Ambiental
+Sostenibilidad Ambiental
+Sostenibilidad Ambiental
+Sostenibilidad Ambiental
+Sostenibilidad Ambiental
+Sostenibilidad Ambiental
+Sostenibilidad Ambiental
+E-commerce y Marketing Digital
+E-commerce y Marketing Digital
+E-commerce y Marketing Digital
+E-commerce y Marketing Digital
+E-commerce y Marketing Digital
+E-commerce y Marketing Digital
+E-commerce y Marketing Digital
+E-commerce y Marketing Digital
+E-commerce y Marketing Digital
+Remozamiento de Curso AdministraciÑn
+Remozamiento de Curso AdministraciÑn
+Remozamiento de Curso AdministraciÑn
+Remozamiento de Curso AdministraciÑn
+Remozamiento de Curso AdministraciÑn
+Remozamiento de Curso AdministraciÑn
+Remozamiento de Curso AdministraciÑn
+Remozamiento de Curso AdministraciÑn
+Remozamiento de Curso AdministraciÑn
+Remozamiento de Curso AdministraciÑn
+Remozamiento de Curso ContadurÕa
+Remozamiento de Curso ContadurÕa
+Remozamiento de Curso ContadurÕa
+Remozamiento de Curso ContadurÕa
+Remozamiento de Curso ContadurÕa
+Remozamiento de Curso ContadurÕa
+Remozamiento de Curso ContadurÕa
+Remozamiento de Curso ContadurÕa
+`.trim();
+
+    const SCHOOL_NAMES = SCHOOL_RAW.split('\n').map((x) => x.trim()).filter(Boolean);
+    const STORAGE_KEY = 'gantt_tracking_v2';
+    const SYNC_SETTINGS_KEY = 'gantt_tracking_sync_v1';
+    const DEFAULT_THEME = {
+      bg: '#f3f6fb',
+      card: '#ffffff',
+      text: '#1f2937',
+      line: '#d7e0ea',
+      tableHeader: '#edf3fa',
+      panel: '#ffffff',
+      ok: '#d1fae5',
+      late: '#fee2e2',
+      bar: '#1d4ed8',
+      schoolBar: '#7c3aed',
+      statusNo: '#ef4444',
+      statusProgress: '#f59e0b',
+      statusDone: '#16a34a',
+      fontSize: '14',
+      radius: '10'
+    };
+
+    function createDefaultCourses() {
+      return COURSE_NAMES.map((name, idx) => ({
+        id: idx + 1,
+        name,
+        school: SCHOOL_NAMES[idx] || 'Sin escuela',
+        productType: 'Grados',
+        dueDate: ''
+      }));
+    }
+
+    function createProfileState() {
+      const profileCourses = createDefaultCourses();
+      const checks = new Map();
+      const targets = new Map();
+      profileCourses.forEach((c) => checks.set(c.id, new Array(TOTAL_WEEKS).fill(0)));
+      profileCourses.forEach((c) => targets.set(c.id, [...DEFAULT_WEEKLY_TARGET]));
+      return {
+        weeklyTarget: [...DEFAULT_WEEKLY_TARGET],
+        courses: profileCourses,
+        realByCourse: checks,
+        targetByCourse: targets,
+        filters: { school: 'all', productType: 'all', course: '', status: 'all', minPercent: '0' }
+      };
+    }
+
+    const profiles = {
+      productor: createProfileState(),
+      academico: createProfileState()
+    };
+
+    let currentProfile = 'productor';
+    let restoredActiveTab = 'productor';
+    let weeklyTarget = [];
+    let courses = [];
+    let realByCourse = new Map();
+    let targetByCourse = new Map();
+    let restoredSchoolFilterValue = 'all';
+    let fitWeeksEnabled = true;
+    let isApplyingExternalState = false;
+    let remoteSaveTimer = null;
+    let supabaseClient = null;
+    let syncChannel = null;
+    let lastRemoteUpdatedAt = '';
+
+    const dashboardFilters = {
+      profile: 'all',
+      school: 'all',
+      productType: 'all',
+      course: ''
+    };
+
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    const searchSchoolSelect = document.getElementById('searchSchool');
+    const productTypeFilterSelect = document.getElementById('productTypeFilter');
+    const searchCourseInput = document.getElementById('searchCourse');
+    const statusFilterSelect = document.getElementById('statusFilter');
+    const minPercentInput = document.getElementById('minPercent');
+
+    const thead = document.getElementById('thead');
+    const tbody = document.getElementById('tbody');
+    const planSummary = document.getElementById('planSummary');
+    const tableWrap = document.getElementById('tableWrap');
+    const syncSupabaseUrlInput = document.getElementById('syncSupabaseUrl');
+    const syncSupabaseKeyInput = document.getElementById('syncSupabaseKey');
+    const syncBoardIdInput = document.getElementById('syncBoardId');
+    const connectSyncBtn = document.getElementById('connectSyncBtn');
+    const syncNowBtn = document.getElementById('syncNowBtn');
+    const syncStatusEl = document.getElementById('syncStatus');
+    const resetProfileBtn = document.getElementById('resetProfileBtn');
+    const fitWeeksBtn = document.getElementById('fitWeeksBtn');
+    const exportJpgBtn = document.getElementById('exportJpgBtn');
+
+    const globalProgress = document.getElementById('globalProgress');
+    const globalTarget = document.getElementById('globalTarget');
+    const globalPercent = document.getElementById('globalPercent');
+    const visibleCoursesPill = document.getElementById('visibleCourses');
+
+    const kpiCourses = document.getElementById('kpiCourses');
+    const kpiDelivered = document.getElementById('kpiDelivered');
+    const kpiTarget = document.getElementById('kpiTarget');
+    const kpiPercent = document.getElementById('kpiPercent');
+
+    const weeklyBars = document.getElementById('weeklyBars');
+    const topCoursesBars = document.getElementById('topCoursesBars');
+    const schoolBars = document.getElementById('schoolBars');
+    const schoolHeat = document.getElementById('schoolHeat');
+    const statusScatter = document.getElementById('statusScatter');
+    const dashboardProfileFilterSelect = document.getElementById('dashboardProfileFilter');
+    const dashboardSchoolFilterSelect = document.getElementById('dashboardSchoolFilter');
+    const dashboardProductTypeFilterSelect = document.getElementById('dashboardProductTypeFilter');
+    const dashboardCourseFilterInput = document.getElementById('dashboardCourseFilter');
+
+    const newProductTypeSelect = document.getElementById('newProductType');
+    const newSchoolInput = document.getElementById('newSchool');
+    const newCourseInput = document.getElementById('newCourse');
+    const addCourseBtn = document.getElementById('addCourseBtn');
+    const titleEl = document.querySelector('.title');
+    const fmtBg = document.getElementById('fmtBg');
+    const fmtCard = document.getElementById('fmtCard');
+    const fmtText = document.getElementById('fmtText');
+    const fmtLine = document.getElementById('fmtLine');
+    const fmtHeader = document.getElementById('fmtHeader');
+    const fmtPanel = document.getElementById('fmtPanel');
+    const fmtOk = document.getElementById('fmtOk');
+    const fmtLate = document.getElementById('fmtLate');
+    const fmtBar = document.getElementById('fmtBar');
+    const fmtSchoolBar = document.getElementById('fmtSchoolBar');
+    const fmtStatusNo = document.getElementById('fmtStatusNo');
+    const fmtStatusProgress = document.getElementById('fmtStatusProgress');
+    const fmtStatusDone = document.getElementById('fmtStatusDone');
+    const fmtFontSize = document.getElementById('fmtFontSize');
+    const fmtRadius = document.getElementById('fmtRadius');
+    const resetFormatBtn = document.getElementById('resetFormatBtn');
+    const formatPanel = document.getElementById('formatPanel');
+    const toggleFormatBtn = document.getElementById('toggleFormatBtn');
+    const profileBadge = document.getElementById('profileBadge');
+
+    function bindProfile(profileKey, { applyInputs = true } = {}) {
+      const key = profileKey === 'academico' ? 'academico' : 'productor';
+      currentProfile = key;
+      const state = profiles[key];
+      weeklyTarget = state.weeklyTarget;
+      courses = state.courses;
+      realByCourse = state.realByCourse;
+      targetByCourse = state.targetByCourse;
+      restoredSchoolFilterValue = state.filters.school || 'all';
+
+      if (applyInputs) {
+        productTypeFilterSelect.value = state.filters.productType || 'all';
+        searchCourseInput.value = state.filters.course || '';
+        statusFilterSelect.value = state.filters.status || 'all';
+        minPercentInput.value = state.filters.minPercent || '0';
+      }
+    }
+
+    function readSyncSettingsFromInputs() {
+      return {
+        url: (syncSupabaseUrlInput ? syncSupabaseUrlInput.value : '').trim(),
+        key: (syncSupabaseKeyInput ? syncSupabaseKeyInput.value : '').trim(),
+        boardId: (syncBoardIdInput ? syncBoardIdInput.value : '').trim()
+      };
+    }
+
+    function syncSettingsValid(settings = readSyncSettingsFromInputs()) {
+      return Boolean(settings.url && settings.key && settings.boardId);
+    }
+
+    function setSyncStatus(message, isError = false) {
+      if (!syncStatusEl) return;
+      syncStatusEl.textContent = message;
+      syncStatusEl.style.color = isError ? '#b91c1c' : 'var(--muted)';
+    }
+
+    async function ensureSupabaseFactory() {
+      if (typeof window.supabaseCreateClient === 'function') return window.supabaseCreateClient;
+      const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+      window.supabaseCreateClient = mod.createClient;
+      return window.supabaseCreateClient;
+    }
+
+    function saveSyncSettings() {
+      try {
+        localStorage.setItem(SYNC_SETTINGS_KEY, JSON.stringify(readSyncSettingsFromInputs()));
+      } catch (error) {
+        console.warn('No se pudo guardar la configuracion de sync:', error);
+      }
+    }
+
+    function loadSyncSettings() {
+      try {
+        const raw = localStorage.getItem(SYNC_SETTINGS_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (syncSupabaseUrlInput) syncSupabaseUrlInput.value = (data && data.url) || '';
+        if (syncSupabaseKeyInput) syncSupabaseKeyInput.value = (data && data.key) || '';
+        if (syncBoardIdInput) syncBoardIdInput.value = (data && data.boardId) || '';
+      } catch (error) {
+        console.warn('No se pudo cargar la configuracion de sync:', error);
+      }
+    }
+
+    function persistActiveProfileFilters() {
+      const state = profiles[currentProfile];
+      state.filters = {
+        school: searchSchoolSelect.value || 'all',
+        productType: productTypeFilterSelect.value || 'all',
+        course: searchCourseInput.value || '',
+        status: statusFilterSelect.value || 'all',
+        minPercent: minPercentInput.value || '0'
+      };
+    }
+
+    function getCourseWeekLimit(courseOrType) {
+      const type = typeof courseOrType === 'string'
+        ? courseOrType
+        : (courseOrType && courseOrType.productType) || 'Grados';
+      return PRODUCT_TYPE_WEEKS[type] || TOTAL_WEEKS;
+    }
+
+    function clampCourseArrays(course) {
+      const reals = realByCourse.get(course.id) || new Array(TOTAL_WEEKS).fill(0);
+      const targets = getCourseTargets(course.id);
+      const weekLimit = getCourseWeekLimit(course);
+      for (let w = 0; w < TOTAL_WEEKS; w++) {
+        if (w >= weekLimit) {
+          reals[w] = 0;
+          targets[w] = 0;
+        } else {
+          reals[w] = Math.max(0, Number(reals[w] || 0));
+          targets[w] = Math.max(0, Number(targets[w] || 0));
+        }
+      }
+      realByCourse.set(course.id, reals);
+      targetByCourse.set(course.id, targets);
+    }
+
+    function getCourseTargets(courseId) {
+      let targets = targetByCourse.get(courseId);
+      if (!Array.isArray(targets) || targets.length !== TOTAL_WEEKS) {
+        targets = new Array(TOTAL_WEEKS).fill(0);
+        targetByCourse.set(courseId, targets);
+      }
+      return targets;
+    }
+
+    function targetForCourse(courseId) {
+      return getCourseTargets(courseId).reduce((sum, v) => sum + Math.max(0, Number(v || 0)), 0);
+    }
+
+    function buildStatePayload() {
+      persistActiveProfileFilters();
+
+      const profilesPayload = {};
+      ['productor', 'academico'].forEach((key) => {
+        const state = profiles[key];
+        const checksObj = {};
+        const targetsObj = {};
+        state.realByCourse.forEach((arr, id) => {
+          checksObj[id] = Array.isArray(arr)
+            ? arr.slice(0, TOTAL_WEEKS).map((v) => {
+                const n = Number(v);
+                return Number.isFinite(n) && n >= 0 ? n : 0;
+              })
+            : new Array(TOTAL_WEEKS).fill(0);
+        });
+        state.targetByCourse.forEach((arr, id) => {
+          targetsObj[id] = Array.isArray(arr)
+            ? arr.slice(0, TOTAL_WEEKS).map((v) => {
+                const n = Number(v);
+                return Number.isFinite(n) && n >= 0 ? n : 0;
+              })
+            : new Array(TOTAL_WEEKS).fill(0);
+        });
+
+        profilesPayload[key] = {
+          weeklyTarget: state.weeklyTarget.slice(0, TOTAL_WEEKS),
+          courses: state.courses.map((c) => ({ id: c.id, name: c.name, school: c.school, productType: c.productType || 'Grados', dueDate: c.dueDate || '' })),
+          checks: checksObj,
+          targets: targetsObj,
+          filters: { ...(state.filters || {}) }
+        };
+      });
+
+      return {
+        profiles: profilesPayload,
+        dates: {
+          start: startDateInput.value || '',
+          end: endDateInput.value || ''
+        },
+        dashboardFilters: {
+          profile: dashboardFilters.profile || 'all',
+          school: dashboardFilters.school || 'all',
+          productType: dashboardFilters.productType || 'all',
+          course: dashboardFilters.course || ''
+        },
+        title: titleEl ? titleEl.textContent : '',
+        activeTab: getActiveTab(),
+        theme: readThemeFromInputs(),
+        ui: {
+          formatCollapsed: formatPanel ? formatPanel.classList.contains('collapsed') : false
+        }
+      };
+    }
+
+    async function pushStateToSupabase(payload = buildStatePayload()) {
+      const settings = readSyncSettingsFromInputs();
+      if (!supabaseClient || !syncSettingsValid(settings)) return;
+
+      const row = {
+        id: settings.boardId,
+        payload,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabaseClient
+        .from('shared_boards')
+        .upsert(row, { onConflict: 'id' });
+
+      if (error) {
+        setSyncStatus(`Sync error: ${error.message}`, true);
+        throw error;
+      }
+
+      lastRemoteUpdatedAt = row.updated_at;
+      setSyncStatus(`Sync activo: ${settings.boardId} | ultimo envio ${new Date(row.updated_at).toLocaleString()}`);
+    }
+
+    function scheduleRemoteSave(payload = buildStatePayload()) {
+      if (isApplyingExternalState || !supabaseClient || !syncSettingsValid()) return;
+      window.clearTimeout(remoteSaveTimer);
+      remoteSaveTimer = window.setTimeout(() => {
+        pushStateToSupabase(payload).catch(() => {});
+      }, 700);
+    }
+
+    function applyTheme(theme) {
+      const root = document.documentElement.style;
+      root.setProperty('--bg', theme.bg);
+      root.setProperty('--card', theme.card);
+      root.setProperty('--text', theme.text);
+      root.setProperty('--line', theme.line);
+      root.setProperty('--table-header-bg', theme.tableHeader);
+      root.setProperty('--panel-bg', theme.panel);
+      root.setProperty('--ok-bg', theme.ok);
+      root.setProperty('--late-bg', theme.late);
+      root.setProperty('--blue', theme.bar);
+      root.setProperty('--violet', theme.schoolBar);
+      root.setProperty('--status-no', theme.statusNo);
+      root.setProperty('--status-progress', theme.statusProgress);
+      root.setProperty('--status-done', theme.statusDone);
+      root.setProperty('--base-font-size', `${theme.fontSize}px`);
+      root.setProperty('--ui-radius', `${theme.radius}px`);
+    }
+
+    function readThemeFromInputs() {
+      return {
+        bg: fmtBg.value,
+        card: fmtCard.value,
+        text: fmtText.value,
+        line: fmtLine.value,
+        tableHeader: fmtHeader.value,
+        panel: fmtPanel.value,
+        ok: fmtOk.value,
+        late: fmtLate.value,
+        bar: fmtBar.value,
+        schoolBar: fmtSchoolBar.value,
+        statusNo: fmtStatusNo.value,
+        statusProgress: fmtStatusProgress.value,
+        statusDone: fmtStatusDone.value,
+        fontSize: fmtFontSize.value,
+        radius: fmtRadius.value
+      };
+    }
+
+    function syncThemeInputs(theme) {
+      fmtBg.value = theme.bg;
+      fmtCard.value = theme.card;
+      fmtText.value = theme.text;
+      fmtLine.value = theme.line;
+      fmtHeader.value = theme.tableHeader;
+      fmtPanel.value = theme.panel;
+      fmtOk.value = theme.ok;
+      fmtLate.value = theme.late;
+      fmtBar.value = theme.bar;
+      fmtSchoolBar.value = theme.schoolBar;
+      fmtStatusNo.value = theme.statusNo;
+      fmtStatusProgress.value = theme.statusProgress;
+      fmtStatusDone.value = theme.statusDone;
+      fmtFontSize.value = theme.fontSize;
+      fmtRadius.value = theme.radius;
+    }
+
+    function getActiveTab() {
+      const active = document.querySelector('.tab-btn.active');
+      return active ? active.dataset.view : 'productor';
+    }
+
+    function applyTableFit() {
+      if (!tableWrap) return;
+      const table = document.getElementById('ganttTable');
+      if (!table) return;
+
+      if (!fitWeeksEnabled) {
+        table.style.zoom = '1';
+        if (fitWeeksBtn) fitWeeksBtn.classList.remove('active');
+        return;
+      }
+
+      table.style.zoom = '1';
+      const available = Math.max(1, tableWrap.clientWidth - 8);
+      const natural = Math.max(1, table.scrollWidth);
+      const factor = Math.min(1, Math.max(0.45, available / natural));
+      table.style.zoom = String(factor);
+      if (fitWeeksBtn) fitWeeksBtn.classList.add('active');
+    }
+
+    function setActiveTab(viewKey) {
+      persistActiveProfileFilters();
+      document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('.sheet').forEach((s) => s.classList.remove('active'));
+      const btn = document.querySelector(`.tab-btn[data-view="${viewKey}"]`);
+      const targetId = btn ? btn.dataset.target : 'ganttSheet';
+      const sheet = document.getElementById(targetId);
+      if (btn && sheet) {
+        btn.classList.add('active');
+        sheet.classList.add('active');
+      } else {
+        document.querySelector('.tab-btn[data-view="productor"]').classList.add('active');
+        document.getElementById('ganttSheet').classList.add('active');
+      }
+
+      const currentView = btn ? btn.dataset.view : 'productor';
+      const isGanttView = currentView === 'productor' || currentView === 'academico';
+      if (resetProfileBtn) resetProfileBtn.style.display = isGanttView ? '' : 'none';
+      if (fitWeeksBtn) fitWeeksBtn.style.display = isGanttView ? '' : 'none';
+      if (exportJpgBtn) exportJpgBtn.style.display = isGanttView ? '' : 'none';
+
+      if (currentView === 'productor' || currentView === 'academico') {
+        bindProfile(currentView);
+        buildTable();
+        applyTableFit();
+        if (profileBadge) {
+          profileBadge.style.display = '';
+          profileBadge.textContent = currentView === 'academico'
+            ? 'Vista activa: Perfil academico'
+            : 'Vista activa: Perfil productor';
+        }
+      } else if (profileBadge) {
+        profileBadge.style.display = 'none';
+      }
+    }
+
+    function saveState() {
+      try {
+        const payload = buildStatePayload();
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        scheduleRemoteSave(payload);
+      } catch (error) {
+        console.warn('No se pudo guardar el estado:', error);
+      }
+    }
+
+    function applyStateData(data, { preserveCurrentTab = true } = {}) {
+      if (!data || typeof data !== 'object') return false;
+      const currentTabBeforeApply = getActiveTab();
+      isApplyingExternalState = true;
+      try {
+        const profileSource = (data.profiles && typeof data.profiles === 'object')
+          ? data.profiles
+          : { productor: data, academico: data };
+
+        ['productor', 'academico'].forEach((key) => {
+          const state = profiles[key];
+          const source = profileSource[key] || profileSource.productor || {};
+
+          if (Array.isArray(source.weeklyTarget)) {
+            state.weeklyTarget = Array.from({ length: TOTAL_WEEKS }, (_, i) => {
+              const n = Number(source.weeklyTarget[i]);
+              return Number.isFinite(n) && n >= 0 ? Math.floor(n) : DEFAULT_WEEKLY_TARGET[i];
+            });
+          } else {
+            state.weeklyTarget = [...DEFAULT_WEEKLY_TARGET];
+          }
+
+          if (Array.isArray(source.courses) && source.courses.length > 0) {
+            state.courses = source.courses.map((c, idx) => {
+              const id = Number(c.id);
+              return {
+                id: Number.isFinite(id) ? id : idx + 1,
+                name: (c.name || '').toString() || `Curso ${idx + 1}`,
+                school: (c.school || '').toString() || 'Sin escuela',
+                productType: PRODUCT_TYPES.includes((c.productType || '').toString()) ? c.productType : 'Grados',
+                dueDate: (c.dueDate || '').toString()
+              };
+            });
+          } else {
+            state.courses = createDefaultCourses();
+          }
+
+          state.realByCourse = new Map();
+          state.targetByCourse = new Map();
+          state.courses.forEach((c) => {
+            const fromState = source.checks && Array.isArray(source.checks[c.id]) ? source.checks[c.id] : [];
+            const normalized = Array.from({ length: TOTAL_WEEKS }, (_, i) => {
+              const rawValue = fromState[i];
+              if (typeof rawValue === 'boolean') return rawValue ? state.weeklyTarget[i] : 0;
+              const n = Number(rawValue);
+              return Number.isFinite(n) && n >= 0 ? n : 0;
+            });
+            state.realByCourse.set(c.id, normalized);
+
+            const fromTargets = source.targets && Array.isArray(source.targets[c.id]) ? source.targets[c.id] : [];
+            const normalizedTargets = Array.from({ length: TOTAL_WEEKS }, (_, i) => {
+              const n = Number(fromTargets[i]);
+              if (Number.isFinite(n) && n >= 0) return Math.floor(n);
+              return 0;
+            });
+            state.targetByCourse.set(c.id, normalizedTargets);
+            clampCourseArrays(c);
+          });
+
+          state.filters = {
+            school: (source.filters && source.filters.school) || 'all',
+            productType: (source.filters && source.filters.productType) || 'all',
+            course: (source.filters && source.filters.course) || '',
+            status: (source.filters && source.filters.status) || 'all',
+            minPercent: (source.filters && source.filters.minPercent) || '0'
+          };
+        });
+
+        if (data.dates) {
+          if (data.dates.start) startDateInput.value = data.dates.start;
+          if (data.dates.end) endDateInput.value = data.dates.end;
+        }
+        if (data.dashboardFilters && typeof data.dashboardFilters === 'object') {
+          dashboardFilters.profile = data.dashboardFilters.profile || 'all';
+          dashboardFilters.school = data.dashboardFilters.school || 'all';
+          dashboardFilters.productType = data.dashboardFilters.productType || 'all';
+          dashboardFilters.course = data.dashboardFilters.course || '';
+        }
+
+        if (titleEl && data.title) titleEl.textContent = data.title;
+        const loadedTheme = data.theme ? { ...DEFAULT_THEME, ...data.theme } : DEFAULT_THEME;
+        applyTheme(loadedTheme);
+        syncThemeInputs(loadedTheme);
+        if (formatPanel && data.ui && typeof data.ui.formatCollapsed === 'boolean') {
+          formatPanel.classList.toggle('collapsed', data.ui.formatCollapsed);
+          if (toggleFormatBtn) {
+            toggleFormatBtn.textContent = data.ui.formatCollapsed ? 'Mostrar formato' : 'Ocultar formato';
+          }
+        }
+
+        syncDashboardFilterInputs();
+        bindProfile(currentTabBeforeApply === 'academico' ? 'academico' : 'productor');
+        if (preserveCurrentTab) {
+          setActiveTab(currentTabBeforeApply === 'dashboard' ? 'dashboard' : currentTabBeforeApply);
+        } else if (data.activeTab) {
+          const mapped = data.activeTab === 'ganttSheet' ? 'productor' : data.activeTab;
+          restoredActiveTab = mapped;
+          setActiveTab(mapped === 'academico' ? 'academico' : mapped);
+        }
+        renderDashboard();
+        return true;
+      } finally {
+        isApplyingExternalState = false;
+      }
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        if (!data || typeof data !== 'object') return false;
+        if (data.activeTab) {
+          const mapped = data.activeTab === 'ganttSheet' ? 'productor' : data.activeTab;
+          restoredActiveTab = mapped;
+        }
+        return applyStateData(data, { preserveCurrentTab: false });
+      } catch (error) {
+        console.warn('No se pudo cargar el estado guardado:', error);
+        return false;
+      }
+    }
+
+    function toDateOnly(date) {
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    function addDays(date, days) {
+      const d = new Date(date);
+      d.setDate(d.getDate() + days);
+      return d;
+    }
+
+    function iso(date) {
+      return new Date(date).toISOString().slice(0, 10);
+    }
+
+    function initDates() {
+      const today = new Date();
+      const start = toDateOnly(today);
+      const end = addDays(start, (TOTAL_WEEKS * 7) - 1);
+      startDateInput.value = iso(start);
+      endDateInput.value = iso(end);
+    }
+
+    function getWeekRanges() {
+      const start = startDateInput.value ? toDateOnly(startDateInput.value) : toDateOnly(new Date());
+      return Array.from({ length: TOTAL_WEEKS }, (_, i) => {
+        const weekStart = addDays(start, i * 7);
+        const weekEnd = addDays(weekStart, 6);
+        return { weekStart, weekEnd };
+      });
+    }
+
+    function upsertSchoolFilterOptions() {
+      const current = searchSchoolSelect.value;
+      const uniqueSchools = [...new Set(courses.map((c) => c.school || 'Sin escuela'))].sort((a, b) => a.localeCompare(b));
+      searchSchoolSelect.innerHTML = '<option value="all">Todas</option>';
+      uniqueSchools.forEach((school) => {
+        const option = document.createElement('option');
+        option.value = school;
+        option.textContent = school;
+        searchSchoolSelect.appendChild(option);
+      });
+      const preferred = restoredSchoolFilterValue || current;
+      if ([...searchSchoolSelect.options].some((o) => o.value === preferred)) {
+        searchSchoolSelect.value = preferred;
+      } else if ([...searchSchoolSelect.options].some((o) => o.value === current)) {
+        searchSchoolSelect.value = current;
+      }
+      restoredSchoolFilterValue = searchSchoolSelect.value;
+    }
+
+    function renderProductTypeOptions(selectedValue) {
+      return PRODUCT_TYPES.map((type) => `<option value="${type}"${type === selectedValue ? ' selected' : ''}>${type}</option>`).join('');
+    }
+
+    function buildTable() {
+      thead.innerHTML = '';
+      tbody.innerHTML = '';
+
+      const hr = document.createElement('tr');
+
+      const hProduct = document.createElement('th');
+      hProduct.className = 'sticky-product';
+      hProduct.textContent = 'Tipo de producto';
+      hr.appendChild(hProduct);
+
+      const hSchool = document.createElement('th');
+      hSchool.className = 'sticky-school';
+      hSchool.textContent = 'Escuela';
+      hr.appendChild(hSchool);
+
+      const hCourse = document.createElement('th');
+      hCourse.className = 'sticky-course';
+      hCourse.textContent = 'Cursos (editable)';
+      hr.appendChild(hCourse);
+
+      const hDate = document.createElement('th');
+      hDate.className = 'sticky-date';
+      hDate.textContent = 'Fecha inicio curso';
+      hr.appendChild(hDate);
+
+      const hCounter = document.createElement('th');
+      hCounter.className = 'sticky-counter';
+      hCounter.textContent = 'Semana atrasada';
+      hr.appendChild(hCounter);
+
+      for (let w = 0; w < TOTAL_WEEKS; w++) {
+        const th = document.createElement('th');
+        th.className = 'week-header';
+        th.dataset.week = String(w);
+        th.innerHTML = `
+          <span class="wk">S${w + 1}</span>
+          <div class="week-real" data-week-real="${w}">Real: 0</div>
+        `;
+        hr.appendChild(th);
+      }
+
+      const hTotal = document.createElement('th');
+      hTotal.textContent = 'Total por curso';
+      hTotal.className = 'total-col';
+      hr.appendChild(hTotal);
+
+      const hPercent = document.createElement('th');
+      hPercent.textContent = '% entregables';
+      hPercent.className = 'percent-col';
+      hr.appendChild(hPercent);
+
+      const hDelete = document.createElement('th');
+      hDelete.textContent = 'Accion';
+      hDelete.className = 'total-col';
+      hr.appendChild(hDelete);
+
+      thead.appendChild(hr);
+
+      courses.forEach((course) => {
+        clampCourseArrays(course);
+        const tr = document.createElement('tr');
+        tr.dataset.course = String(course.id);
+
+        const productTd = document.createElement('td');
+        productTd.className = 'sticky-product';
+        productTd.innerHTML = `<select class="product-type-select" data-course-type="${course.id}">${renderProductTypeOptions(course.productType || 'Grados')}</select>`;
+        tr.appendChild(productTd);
+
+        const schoolTd = document.createElement('td');
+        schoolTd.className = 'sticky-school';
+        schoolTd.innerHTML = `<span class="school-name" contenteditable="true">${course.school}</span>`;
+        tr.appendChild(schoolTd);
+
+        const courseTd = document.createElement('td');
+        courseTd.className = 'sticky-course';
+        courseTd.innerHTML = `<span class="course-name" contenteditable="true">${course.name}</span>`;
+        tr.appendChild(courseTd);
+
+        const dateTd = document.createElement('td');
+        dateTd.className = 'sticky-date';
+        dateTd.innerHTML = `<input class="course-date-input" data-course-date="${course.id}" type="date" value="${course.dueDate || ''}" />`;
+        tr.appendChild(dateTd);
+
+        const counterTd = document.createElement('td');
+        counterTd.className = 'sticky-counter';
+        counterTd.dataset.courseWeekCounter = String(course.id);
+        counterTd.textContent = '-';
+        tr.appendChild(counterTd);
+
+        const reals = realByCourse.get(course.id) || new Array(TOTAL_WEEKS).fill(0);
+        realByCourse.set(course.id, reals);
+        const targets = getCourseTargets(course.id);
+        const weekLimit = getCourseWeekLimit(course);
+
+        for (let w = 0; w < TOTAL_WEEKS; w++) {
+          const td = document.createElement('td');
+          td.className = 'cell';
+          const isActiveWeek = w < weekLimit;
+
+          const check = document.createElement('input');
+          check.type = 'checkbox';
+          check.className = 'deliverable';
+          check.dataset.course = String(course.id);
+          check.dataset.week = String(w);
+          check.checked = Number(reals[w] || 0) > 0;
+          check.disabled = !isActiveWeek;
+          check.addEventListener('change', () => {
+            const meta = Math.max(0, Number(targets[w] || 0));
+            if (check.checked) {
+              const current = Number(reals[w] || 0);
+              if (current <= 0) reals[w] = meta > 0 ? Math.ceil(meta / 2) : 0;
+            } else {
+              reals[w] = 0;
+            }
+            refreshStatus();
+          });
+
+          const targetInput = document.createElement('input');
+          targetInput.type = 'number';
+          targetInput.min = '0';
+          targetInput.step = '1';
+          targetInput.className = 'target-input';
+          targetInput.dataset.course = String(course.id);
+          targetInput.dataset.week = String(w);
+          targetInput.title = 'Meta';
+          targetInput.value = String(Math.max(0, Number(targets[w] || 0)));
+          targetInput.disabled = !isActiveWeek;
+          targetInput.addEventListener('input', () => {
+            const meta = Math.max(0, Math.floor(Number(targetInput.value || 0)));
+            targets[w] = meta;
+            targetInput.value = String(meta);
+            if (Number(reals[w] || 0) > meta) {
+              reals[w] = meta;
+            }
+            refreshStatus();
+          });
+
+          const realInput = document.createElement('input');
+          realInput.type = 'number';
+          realInput.min = '0';
+          realInput.step = '1';
+          realInput.className = 'real-input';
+          realInput.dataset.course = String(course.id);
+          realInput.dataset.week = String(w);
+          realInput.title = 'Real';
+          realInput.value = String(Math.max(0, Number(reals[w] || 0)));
+          realInput.disabled = !isActiveWeek;
+          realInput.addEventListener('input', () => {
+            const meta = Math.max(0, Number(targets[w] || 0));
+            const val = Math.max(0, Math.floor(Number(realInput.value || 0)));
+            reals[w] = Math.min(val, meta);
+            realInput.value = String(reals[w]);
+            check.checked = reals[w] > 0;
+            refreshStatus();
+          });
+
+          const wrap = document.createElement('div');
+          wrap.className = 'cell-inputs';
+          wrap.appendChild(check);
+          wrap.appendChild(targetInput);
+          wrap.appendChild(realInput);
+          td.appendChild(wrap);
+          if (!isActiveWeek) td.classList.add('inactive');
+          tr.appendChild(td);
+        }
+
+        const totalTd = document.createElement('td');
+        totalTd.className = 'total-col';
+        totalTd.dataset.courseTotal = String(course.id);
+        totalTd.textContent = '0';
+        tr.appendChild(totalTd);
+
+        const percentTd = document.createElement('td');
+        percentTd.className = 'percent-col';
+        percentTd.dataset.coursePercent = String(course.id);
+        percentTd.textContent = '0.00%';
+        tr.appendChild(percentTd);
+
+        const deleteTd = document.createElement('td');
+        deleteTd.innerHTML = `<button class="delete-btn" data-delete-course="${course.id}" type="button">Eliminar</button>`;
+        tr.appendChild(deleteTd);
+
+        tbody.appendChild(tr);
+      });
+
+      const summaryRow = document.createElement('tr');
+      summaryRow.id = 'weeklySummaryRow';
+
+      const labelProduct = document.createElement('td');
+      labelProduct.className = 'sticky-product week-total';
+      labelProduct.textContent = 'Resumen';
+      summaryRow.appendChild(labelProduct);
+
+      const labelSchool = document.createElement('td');
+      labelSchool.className = 'sticky-school week-total';
+      labelSchool.textContent = 'Tipos / escuelas';
+      summaryRow.appendChild(labelSchool);
+
+      const labelCourse = document.createElement('td');
+      labelCourse.className = 'sticky-course week-total';
+      labelCourse.textContent = 'Entregado por semana';
+      summaryRow.appendChild(labelCourse);
+
+      const labelDate = document.createElement('td');
+      labelDate.className = 'sticky-date week-total';
+      labelDate.textContent = 'Fecha';
+      summaryRow.appendChild(labelDate);
+
+      const labelCounter = document.createElement('td');
+      labelCounter.className = 'sticky-counter week-total';
+      labelCounter.textContent = 'Atraso';
+      summaryRow.appendChild(labelCounter);
+
+      for (let w = 0; w < TOTAL_WEEKS; w++) {
+        const td = document.createElement('td');
+        td.className = 'week-total';
+        td.dataset.weekTotal = String(w);
+        td.textContent = '0';
+        summaryRow.appendChild(td);
+      }
+
+      const grandTotalTd = document.createElement('td');
+      grandTotalTd.id = 'grandTotalCell';
+      grandTotalTd.className = 'week-total total-col';
+      grandTotalTd.textContent = '0';
+      summaryRow.appendChild(grandTotalTd);
+
+      const grandPercentTd = document.createElement('td');
+      grandPercentTd.id = 'grandPercentCell';
+      grandPercentTd.className = 'week-total percent-col';
+      grandPercentTd.textContent = '0.00%';
+      summaryRow.appendChild(grandPercentTd);
+
+      const grandDeleteTd = document.createElement('td');
+      grandDeleteTd.className = 'week-total total-col';
+      grandDeleteTd.textContent = '-';
+      summaryRow.appendChild(grandDeleteTd);
+
+      tbody.appendChild(summaryRow);
+
+      document.querySelectorAll('.product-type-select').forEach((el) => {
+        el.addEventListener('change', () => {
+          const id = Number(el.dataset.courseType);
+          const item = courses.find((c) => c.id === id);
+          if (!item) return;
+          item.productType = PRODUCT_TYPES.includes(el.value) ? el.value : 'Grados';
+          clampCourseArrays(item);
+          buildTable();
+        });
+      });
+
+      document.querySelectorAll('tr[data-course] .course-name').forEach((el) => {
+        el.addEventListener('input', () => {
+          const row = el.closest('tr');
+          const id = Number(row.dataset.course);
+          const item = courses.find((c) => c.id === id);
+          if (item) item.name = el.textContent.trim() || 'Curso sin nombre';
+          refreshStatus();
+        });
+      });
+
+      document.querySelectorAll('tr[data-course] .school-name').forEach((el) => {
+        el.addEventListener('input', () => {
+          const row = el.closest('tr');
+          const id = Number(row.dataset.course);
+          const item = courses.find((c) => c.id === id);
+          if (item) item.school = el.textContent.trim() || 'Sin escuela';
+          upsertSchoolFilterOptions();
+          refreshStatus();
+        });
+      });
+
+      document.querySelectorAll('.course-date-input').forEach((el) => {
+        el.addEventListener('change', () => {
+          const id = Number(el.dataset.courseDate);
+          const item = courses.find((c) => c.id === id);
+          if (item) item.dueDate = el.value || '';
+          refreshStatus();
+          saveState();
+        });
+      });
+
+      document.querySelectorAll('[data-delete-course]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = Number(btn.dataset.deleteCourse);
+          const item = courses.find((c) => c.id === id);
+          if (!item) return;
+          const ok = window.confirm(`Eliminar el curso "${item.name}" del perfil ${currentProfile}?`);
+          if (!ok) return;
+          courses = courses.filter((c) => c.id !== id);
+          profiles[currentProfile].courses = courses;
+          realByCourse.delete(id);
+          targetByCourse.delete(id);
+          buildTable();
+          saveState();
+        });
+      });
+
+      upsertSchoolFilterOptions();
+      refreshStatus();
+      applyTableFit();
+    }
+
+    function classifyPercent(pct) {
+      if (pct >= 100) return 'good';
+      if (pct > 0) return 'mid';
+      return 'low';
+    }
+
+    function weekCounterFromStart(startDateValue) {
+      if (!startDateValue) return '-';
+      const start = toDateOnly(startDateValue);
+      if (Number.isNaN(start.getTime())) return '-';
+      const today = toDateOnly(new Date());
+      if (today < start) return '0';
+
+      const FRIDAY = 5; // 0=Domingo ... 5=Viernes
+      const startDow = start.getDay();
+      const daysToFirstFriday = (FRIDAY - startDow + 7) % 7;
+      const firstFriday = addDays(start, daysToFirstFriday);
+
+      // Semana vencida: solo cuenta cuando ya llegÑ (o pasÑ) el viernes de cierre.
+      if (today < firstFriday) return '0';
+
+      const diffDays = Math.floor((today - firstFriday) / (1000 * 60 * 60 * 24));
+      return String(1 + Math.floor(diffDays / 7));
+    }
+
+    function applyFilters() {
+      const school = searchSchoolSelect.value;
+      const productType = productTypeFilterSelect.value;
+      const term = searchCourseInput.value.trim().toLowerCase();
+      const status = statusFilterSelect.value;
+      const minPct = Math.max(0, Number(minPercentInput.value || 0));
+      const rows = Array.from(tbody.querySelectorAll('tr[data-course]'));
+
+      const visibleRows = [];
+      rows.forEach((row) => {
+        const id = Number(row.dataset.course);
+        const item = courses.find((c) => c.id === id);
+        const name = (item ? item.name : '').toLowerCase();
+        const itemSchool = item ? item.school : 'Sin escuela';
+        const itemProductType = item ? item.productType || 'Grados' : 'Grados';
+        const pct = Number(row.dataset.percent || 0);
+        const st = row.dataset.status || 'no';
+
+        const passSchool = school === 'all' || itemSchool === school;
+        const passProductType = productType === 'all' || itemProductType === productType;
+        const passTerm = !term || name.includes(term);
+        const passStatus = status === 'all' || st === status;
+        const passPct = pct >= minPct;
+
+        const visible = passSchool && passProductType && passTerm && passStatus && passPct;
+        row.style.display = visible ? '' : 'none';
+        if (visible) visibleRows.push(row);
+      });
+
+      const summaryRow = document.getElementById('weeklySummaryRow');
+      if (summaryRow) summaryRow.style.display = '';
+      return visibleRows;
+    }
+
+    function refreshStatus() {
+      const weekRanges = getWeekRanges();
+      const today = toDateOnly(new Date());
+
+      courses.forEach((course) => {
+        const reals = realByCourse.get(course.id) || new Array(TOTAL_WEEKS).fill(0);
+        realByCourse.set(course.id, reals);
+        const metas = getCourseTargets(course.id);
+        const weekLimit = getCourseWeekLimit(course);
+
+        let total = 0;
+        let courseTarget = 0;
+        reals.forEach((realRaw, w) => {
+          if (w >= weekLimit) {
+            metas[w] = 0;
+            reals[w] = 0;
+          }
+          const meta = w < weekLimit ? Math.max(0, Number(metas[w] || 0)) : 0;
+          const real = Math.max(0, Math.min(Number(realRaw || 0), meta));
+          reals[w] = real;
+          const cellCheck = document.querySelector(`.deliverable[data-course="${course.id}"][data-week="${w}"]`);
+          const cellTarget = document.querySelector(`.target-input[data-course="${course.id}"][data-week="${w}"]`);
+          const cellReal = document.querySelector(`.real-input[data-course="${course.id}"][data-week="${w}"]`);
+          if (cellCheck) {
+            const td = cellCheck.closest('td');
+            td.classList.remove('done', 'partial', 'none');
+            td.classList.toggle('inactive', w >= weekLimit);
+            if (w >= weekLimit || meta <= 0) {
+              td.classList.remove('done', 'partial', 'none');
+            } else if (real <= 0) td.classList.add('none');
+            else if (real < meta) td.classList.add('partial');
+            else td.classList.add('done');
+            cellCheck.checked = real > 0;
+            cellCheck.disabled = w >= weekLimit;
+          }
+          if (cellTarget) {
+            cellTarget.value = String(meta);
+            cellTarget.disabled = w >= weekLimit;
+          }
+          if (cellReal) {
+            cellReal.max = String(meta);
+            cellReal.value = String(real);
+            cellReal.disabled = w >= weekLimit;
+          }
+          total += real;
+          courseTarget += meta;
+        });
+
+        const pct = courseTarget > 0 ? (total / courseTarget) * 100 : 0;
+
+        const totalTd = document.querySelector(`[data-course-total="${course.id}"]`);
+        if (totalTd) totalTd.textContent = String(total);
+
+        const pctTd = document.querySelector(`[data-course-percent="${course.id}"]`);
+        if (pctTd) {
+          pctTd.textContent = `${pct.toFixed(2)}%`;
+          pctTd.classList.remove('good', 'mid', 'low');
+          pctTd.classList.add(classifyPercent(pct));
+        }
+
+        const row = document.querySelector(`tr[data-course="${course.id}"]`);
+        if (row) {
+          row.dataset.total = String(total);
+          row.dataset.target = String(courseTarget);
+          row.dataset.percent = String(pct);
+          row.dataset.status = pct >= 100 ? 'done' : pct > 0 ? 'progress' : 'no';
+        }
+
+        const weekCounterTd = document.querySelector(`[data-course-week-counter="${course.id}"]`);
+        if (weekCounterTd) {
+          const delayWeeks = Number(weekCounterFromStart(course.dueDate || ''));
+          if (Number.isFinite(delayWeeks)) {
+            weekCounterTd.textContent = `${Math.min(delayWeeks, getCourseWeekLimit(course))}`;
+          } else {
+            weekCounterTd.textContent = weekCounterFromStart(course.dueDate || '');
+          }
+        }
+      });
+
+      const visibleRows = applyFilters();
+      const visibleIds = visibleRows.map((r) => Number(r.dataset.course));
+      const visibleCount = visibleIds.length;
+
+      const deliveredVisible = visibleRows.reduce((acc, row) => acc + Number(row.dataset.total || 0), 0);
+      const targetVisible = visibleRows.reduce((acc, row) => acc + Number(row.dataset.target || 0), 0);
+      const pctVisible = targetVisible > 0 ? (deliveredVisible / targetVisible) * 100 : 0;
+
+      globalProgress.textContent = `Entregado total: ${deliveredVisible}`;
+      globalTarget.textContent = `Objetivo total: ${targetVisible}`;
+      globalPercent.textContent = `Avance global: ${pctVisible.toFixed(2)}%`;
+      visibleCoursesPill.textContent = `Cursos visibles: ${visibleCount}`;
+
+      for (let w = 0; w < TOTAL_WEEKS; w++) {
+        const objectiveWeek = visibleIds.reduce((sum, id) => {
+          const metas = getCourseTargets(id);
+          return sum + Number(metas[w] || 0);
+        }, 0);
+        const deliveredWeek = visibleIds.reduce((sum, id) => {
+          const reals = realByCourse.get(id) || [];
+          return sum + Number(reals[w] || 0);
+        }, 0);
+
+        const pctWeek = objectiveWeek > 0 ? (deliveredWeek / objectiveWeek) * 100 : 0;
+        const cell = document.querySelector(`[data-week-total="${w}"]`);
+        const weekRealLabel = document.querySelector(`[data-week-real="${w}"]`);
+        if (cell) {
+          cell.textContent = `${deliveredWeek} / ${objectiveWeek} (${pctWeek.toFixed(1)}%)`;
+          cell.classList.remove('ok', 'late');
+          const weekClosed = today > weekRanges[w].weekEnd;
+          if (pctWeek >= 100 && objectiveWeek > 0) cell.classList.add('ok');
+          else if (weekClosed && objectiveWeek > 0) cell.classList.add('late');
+        }
+        if (weekRealLabel) weekRealLabel.textContent = `Real: ${deliveredWeek} / Meta: ${objectiveWeek}`;
+      }
+
+      const grandTotalCell = document.getElementById('grandTotalCell');
+      const grandPercentCell = document.getElementById('grandPercentCell');
+      if (grandTotalCell) grandTotalCell.textContent = String(deliveredVisible);
+      if (grandPercentCell) grandPercentCell.textContent = `${pctVisible.toFixed(2)}%`;
+
+      planSummary.textContent = `${courses.length} cursos | 15 semanas max. | ECV usa 4 semanas | Meta editable`;
+      persistActiveProfileFilters();
+      renderDashboard();
+      saveState();
+    }
+
+    async function initSupabaseSync({ fetchRemote = true } = {}) {
+      const settings = readSyncSettingsFromInputs();
+      saveSyncSettings();
+
+      if (!syncSettingsValid(settings)) {
+        setSyncStatus('Sync: configura URL, anon key y tablero compartido');
+        return false;
+      }
+      const createClient = await ensureSupabaseFactory();
+
+      supabaseClient = createClient(settings.url, settings.key, {
+        auth: { persistSession: false, autoRefreshToken: false }
+      });
+
+      if (syncChannel) {
+        supabaseClient.removeChannel(syncChannel);
+        syncChannel = null;
+      }
+
+      setSyncStatus(`Sync conectando: ${settings.boardId}...`);
+
+      if (fetchRemote) {
+        const { data, error } = await supabaseClient
+          .from('shared_boards')
+          .select('payload, updated_at')
+          .eq('id', settings.boardId)
+          .maybeSingle();
+
+        if (error) {
+          setSyncStatus(`Sync error: ${error.message}`, true);
+          return false;
+        }
+
+        if (data && data.payload) {
+          lastRemoteUpdatedAt = data.updated_at || '';
+          applyStateData(data.payload, { preserveCurrentTab: true });
+          setSyncStatus(`Sync activo: ${settings.boardId} | cargado ${data.updated_at ? new Date(data.updated_at).toLocaleString() : 'sin fecha'}`);
+        } else {
+          await pushStateToSupabase(buildStatePayload());
+        }
+      }
+
+      syncChannel = supabaseClient
+        .channel(`shared-board-${settings.boardId}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'shared_boards',
+          filter: `id=eq.${settings.boardId}`
+        }, (payload) => {
+          const row = payload.new || payload.record || {};
+          if (!row.payload) return;
+          if (row.updated_at && row.updated_at === lastRemoteUpdatedAt) return;
+          lastRemoteUpdatedAt = row.updated_at || '';
+          applyStateData(row.payload, { preserveCurrentTab: true });
+          setSyncStatus(`Sync activo: ${settings.boardId} | recibido ${row.updated_at ? new Date(row.updated_at).toLocaleString() : 'sin fecha'}`);
+        })
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            setSyncStatus(`Sync activo: ${settings.boardId} | escuchando cambios`);
+          }
+        });
+
+      return true;
+    }
+
+    function getDashboardRows() {
+      const profileList = dashboardFilters.profile === 'all'
+        ? ['productor', 'academico']
+        : [dashboardFilters.profile];
+      const term = (dashboardFilters.course || '').trim().toLowerCase();
+      const schoolFilter = dashboardFilters.school || 'all';
+      const productTypeFilter = dashboardFilters.productType || 'all';
+      const rows = [];
+
+      profileList.forEach((profileKey) => {
+        const state = profiles[profileKey];
+        if (!state) return;
+
+        state.courses.forEach((course) => {
+          const school = course.school || 'Sin escuela';
+          const productType = course.productType || 'Grados';
+          if (schoolFilter !== 'all' && school !== schoolFilter) return;
+          if (productTypeFilter !== 'all' && productType !== productTypeFilter) return;
+          if (term && !(course.name || '').toLowerCase().includes(term)) return;
+
+          const reals = state.realByCourse.get(course.id) || new Array(TOTAL_WEEKS).fill(0);
+          const targets = state.targetByCourse.get(course.id) || new Array(TOTAL_WEEKS).fill(0);
+          const weekLimit = getCourseWeekLimit(productType);
+          const total = reals.reduce((sum, v, idx) => sum + (idx < weekLimit ? Number(v || 0) : 0), 0);
+          const courseTarget = targets.reduce((sum, v, idx) => sum + (idx < weekLimit ? Number(v || 0) : 0), 0);
+          const pct = courseTarget > 0 ? (total / courseTarget) * 100 : 0;
+
+          rows.push({
+            profile: profileKey,
+            id: course.id,
+            name: course.name || `Curso ${course.id}`,
+            school,
+            productType,
+            reals: Array.from({ length: TOTAL_WEEKS }, (_, i) => (i < weekLimit ? Number(reals[i] || 0) : 0)),
+            targets: Array.from({ length: TOTAL_WEEKS }, (_, i) => (i < weekLimit ? Number(targets[i] || 0) : 0)),
+            total,
+            target: courseTarget,
+            pct
+          });
+        });
+      });
+
+      return rows;
+    }
+
+    function getScatterRowsAllProfiles() {
+      const term = (dashboardFilters.course || '').trim().toLowerCase();
+      const schoolFilter = dashboardFilters.school || 'all';
+      const productTypeFilter = dashboardFilters.productType || 'all';
+      const mergedByCourseName = new Map();
+
+      ['productor', 'academico'].forEach((profileKey) => {
+        const state = profiles[profileKey];
+        if (!state) return;
+
+        state.courses.forEach((course) => {
+          const courseName = (course.name || `Curso ${course.id}`).trim();
+          const courseKey = courseName.toLowerCase();
+          const school = course.school || 'Sin escuela';
+          const productType = course.productType || 'Grados';
+          if (schoolFilter !== 'all' && school !== schoolFilter) return;
+          if (productTypeFilter !== 'all' && productType !== productTypeFilter) return;
+          if (term && !courseKey.includes(term)) return;
+
+          const reals = state.realByCourse.get(course.id) || new Array(TOTAL_WEEKS).fill(0);
+          const weekLimit = getCourseWeekLimit(productType);
+          if (!mergedByCourseName.has(courseKey)) {
+            mergedByCourseName.set(courseKey, {
+              name: courseName,
+              reals: new Array(TOTAL_WEEKS).fill(0)
+            });
+          }
+
+          const merged = mergedByCourseName.get(courseKey);
+          for (let w = 0; w < TOTAL_WEEKS; w++) {
+            const value = w < weekLimit ? Number(reals[w] || 0) : 0;
+            merged.reals[w] = Math.max(Number(merged.reals[w] || 0), value);
+          }
+        });
+      });
+
+      return [...mergedByCourseName.values()];
+    }
+
+    function updateDashboardSchoolOptions() {
+      const profileList = dashboardFilters.profile === 'all'
+        ? ['productor', 'academico']
+        : [dashboardFilters.profile];
+      const schoolSet = new Set();
+      profileList.forEach((profileKey) => {
+        const state = profiles[profileKey];
+        if (!state) return;
+        state.courses.forEach((course) => schoolSet.add(course.school || 'Sin escuela'));
+      });
+
+      const current = dashboardFilters.school || 'all';
+      const sorted = [...schoolSet].sort((a, b) => a.localeCompare(b));
+      dashboardSchoolFilterSelect.innerHTML = '<option value="all">Todas</option>';
+      sorted.forEach((school) => {
+        const option = document.createElement('option');
+        option.value = school;
+        option.textContent = school;
+        dashboardSchoolFilterSelect.appendChild(option);
+      });
+
+      dashboardFilters.school = sorted.includes(current) ? current : 'all';
+      dashboardSchoolFilterSelect.value = dashboardFilters.school;
+    }
+
+    function syncDashboardFilterInputs() {
+      if (dashboardProfileFilterSelect) dashboardProfileFilterSelect.value = dashboardFilters.profile;
+      if (dashboardProductTypeFilterSelect) dashboardProductTypeFilterSelect.value = dashboardFilters.productType || 'all';
+      if (dashboardCourseFilterInput) dashboardCourseFilterInput.value = dashboardFilters.course;
+      updateDashboardSchoolOptions();
+    }
+
+    function renderDashboard() {
+      updateDashboardSchoolOptions();
+      const rows = getDashboardRows();
+      const scatterRows = getScatterRowsAllProfiles();
+      const delivered = rows.reduce((sum, r) => sum + r.total, 0);
+      const target = rows.reduce((sum, r) => sum + r.target, 0);
+      const pct = target > 0 ? (delivered / target) * 100 : 0;
+
+      kpiCourses.textContent = String(rows.length);
+      kpiDelivered.textContent = String(delivered);
+      kpiTarget.textContent = String(target);
+      kpiPercent.textContent = `${pct.toFixed(2)}%`;
+
+      renderWeeklyBars(rows);
+      renderTopCourses(rows);
+      renderStatusScatter(scatterRows);
+      renderSchoolBars(rows);
+      renderSchoolHeat(rows);
+    }
+
+    function renderStatusScatter(rows) {
+      if (!statusScatter) return;
+      const width = 860;
+      const height = 270;
+      const margin = { top: 16, right: 22, bottom: 34, left: 42 };
+      const innerW = width - margin.left - margin.right;
+      const innerH = height - margin.top - margin.bottom;
+      const maxY = Math.max(rows.length, 1);
+
+      const series = {
+        no: [],
+        done: []
+      };
+
+      for (let w = 0; w < TOTAL_WEEKS; w++) {
+        let no = 0;
+        let done = 0;
+
+        rows.forEach((row) => {
+          if (Number(row.reals[w] || 0) > 0) done += 1;
+          else no += 1;
+        });
+
+        series.no.push(no);
+        series.done.push(done);
+      }
+
+      const x = (i) => margin.left + (TOTAL_WEEKS === 1 ? innerW / 2 : (i / (TOTAL_WEEKS - 1)) * innerW);
+      const y = (v) => margin.top + innerH - (v / maxY) * innerH;
+
+      function linePath(arr) {
+        return arr.map((v, i) => `${i === 0 ? 'M' : 'L'} ${x(i)} ${y(v)}`).join(' ');
+      }
+
+      const axisColor = '#94a3b8';
+      const gridLines = Array.from({ length: 5 }, (_, i) => {
+        const val = Math.round((maxY / 4) * i);
+        const yy = y(val);
+        return `<line x1="${margin.left}" y1="${yy}" x2="${width - margin.right}" y2="${yy}" stroke="${axisColor}" stroke-opacity="0.3" />
+                <text x="${margin.left - 8}" y="${yy + 3}" text-anchor="end" font-size="11" fill="#64748b">${val}</text>`;
+      }).join('');
+
+      const xLabels = Array.from({ length: TOTAL_WEEKS }, (_, i) => {
+        const xx = x(i);
+        return `<text x="${xx}" y="${height - 10}" text-anchor="middle" font-size="10" fill="#64748b">S${i + 1}</text>`;
+      }).join('');
+
+      function points(arr, color) {
+        return arr.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="3.5" fill="${color}" />`).join('');
+      }
+
+      function pointLabels(arr, color, yOffset) {
+        return arr.map((v, i) => {
+          const xx = x(i);
+          const yy = y(v) + yOffset;
+          return `<text x="${xx}" y="${yy}" text-anchor="middle" font-size="10" fill="${color}" font-weight="700">${v}</text>`;
+        }).join('');
+      }
+
+      statusScatter.innerHTML = `
+        <rect x="0" y="0" width="${width}" height="${height}" fill="white"></rect>
+        ${gridLines}
+        <line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}" stroke="${axisColor}" />
+        <line x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}" stroke="${axisColor}" />
+
+        <path d="${linePath(series.no)}" fill="none" stroke="var(--status-no)" stroke-width="2.2"></path>
+        <path d="${linePath(series.done)}" fill="none" stroke="var(--status-done)" stroke-width="2.2"></path>
+
+        ${points(series.no, 'var(--status-no)')}
+        ${points(series.done, 'var(--status-done)')}
+        ${pointLabels(series.no, 'var(--status-no)', -8)}
+        ${pointLabels(series.done, 'var(--status-done)', -16)}
+
+        ${xLabels}
+        <text x="${width / 2}" y="${height - 2}" text-anchor="middle" font-size="11" fill="#64748b">Semanas</text>
+        <text x="14" y="${height / 2}" transform="rotate(-90 14 ${height / 2})" text-anchor="middle" font-size="11" fill="#64748b">Cantidad de cursos</text>
+      `;
+    }
+
+    function renderWeeklyBars(rows) {
+      weeklyBars.innerHTML = '';
+      for (let w = 0; w < TOTAL_WEEKS; w++) {
+        const objective = rows.reduce((sum, row) => sum + Number(row.targets[w] || 0), 0);
+        const delivered = rows.reduce((sum, row) => sum + Number(row.reals[w] || 0), 0);
+
+        const pct = objective > 0 ? (delivered / objective) * 100 : 0;
+        const row = document.createElement('div');
+        row.className = 'bar-row';
+        row.innerHTML = `
+          <div>S${w + 1}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100, pct)}%"></div></div>
+          <div>${pct.toFixed(1)}%</div>
+        `;
+        weeklyBars.appendChild(row);
+      }
+    }
+
+    function renderTopCourses(rows) {
+      topCoursesBars.innerHTML = '';
+      const topRows = rows.map((row) => ({
+        name: row.name,
+        profile: row.profile,
+        pct: row.pct
+      })).sort((a, b) => b.pct - a.pct).slice(0, 10);
+
+      topRows.forEach((r) => {
+        const cut = r.name.length > 30 ? `${r.name.slice(0, 30)}...` : r.name;
+        const row = document.createElement('div');
+        row.className = 'bar-row';
+        row.innerHTML = `
+          <div title="${r.profile.toUpperCase()} | ${r.name}">${cut}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100, r.pct)}%"></div></div>
+          <div>${r.pct.toFixed(1)}%</div>
+        `;
+        topCoursesBars.appendChild(row);
+      });
+    }
+
+    function renderSchoolBars(rows) {
+      schoolBars.innerHTML = '';
+      const bySchool = new Map();
+
+      rows.forEach((rowData) => {
+        const school = rowData.school || 'Sin escuela';
+        const total = rowData.total;
+        if (!bySchool.has(school)) bySchool.set(school, { delivered: 0, target: 0, count: 0 });
+        const row = bySchool.get(school);
+        row.delivered += total;
+        row.target += rowData.target;
+        row.count += 1;
+      });
+
+      const arr = [...bySchool.entries()].map(([school, v]) => {
+        const target = v.target;
+        const pct = target > 0 ? (v.delivered / target) * 100 : 0;
+        return { school, pct, delivered: v.delivered, target, count: v.count };
+      }).sort((a, b) => b.pct - a.pct);
+
+      arr.forEach((r) => {
+        const row = document.createElement('div');
+        row.className = 'school-row';
+        row.innerHTML = `
+          <div title="${r.school}">${r.school}</div>
+          <div class="school-track"><div class="school-fill" style="width:${Math.min(100, r.pct)}%"></div></div>
+          <div>${r.pct.toFixed(1)}%</div>
+        `;
+        schoolBars.appendChild(row);
+      });
+    }
+
+    function renderSchoolHeat(rows) {
+      schoolHeat.innerHTML = '';
+      const bySchool = new Map();
+
+      rows.forEach((rowData) => {
+        const school = rowData.school || 'Sin escuela';
+        const total = rowData.total;
+
+        if (!bySchool.has(school)) bySchool.set(school, { delivered: 0, target: 0, count: 0 });
+        const row = bySchool.get(school);
+        row.delivered += total;
+        row.target += rowData.target;
+        row.count += 1;
+      });
+
+      const arr = [...bySchool.entries()].map(([school, v]) => {
+        const target = v.target;
+        const pct = target > 0 ? (v.delivered / target) * 100 : 0;
+        return { school, pct, count: v.count };
+      }).sort((a, b) => b.count - a.count).slice(0, 15);
+
+      arr.forEach((r) => {
+        const cls = r.pct >= 100 ? 'high' : r.pct > 0 ? 'mid' : 'low';
+        const card = document.createElement('div');
+        card.className = `heat-card ${cls}`;
+        card.innerHTML = `
+          <div class="name" title="${r.school}">${r.school}</div>
+          <div class="pct">${r.pct.toFixed(1)}%</div>
+          <div class="name">Cursos: ${r.count}</div>
+        `;
+        schoolHeat.appendChild(card);
+      });
+    }
+
+    function recalcEndDate() {
+      if (!startDateInput.value) return;
+      const start = toDateOnly(startDateInput.value);
+      const end = addDays(start, (TOTAL_WEEKS * 7) - 1);
+      endDateInput.value = iso(end);
+      buildTable();
+    }
+
+    function addCourse() {
+      const productType = newProductTypeSelect ? newProductTypeSelect.value : 'Grados';
+      const school = (newSchoolInput.value || '').trim();
+      const name = (newCourseInput.value || '').trim();
+      if (!name) return;
+
+      const nextId = courses.length ? Math.max(...courses.map((c) => c.id)) + 1 : 1;
+      courses.push({ id: nextId, name, school: school || 'Sin escuela', productType, dueDate: '' });
+      realByCourse.set(nextId, new Array(TOTAL_WEEKS).fill(0));
+      targetByCourse.set(nextId, new Array(TOTAL_WEEKS).fill(0));
+      clampCourseArrays(courses[courses.length - 1]);
+
+      if (newProductTypeSelect) newProductTypeSelect.value = 'Grados';
+      newSchoolInput.value = '';
+      newCourseInput.value = '';
+      buildTable();
+      saveState();
+    }
+
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        setActiveTab(btn.dataset.view);
+        saveState();
+      });
+    });
+
+    searchSchoolSelect.addEventListener('change', refreshStatus);
+    productTypeFilterSelect.addEventListener('change', refreshStatus);
+    searchCourseInput.addEventListener('input', refreshStatus);
+    statusFilterSelect.addEventListener('change', refreshStatus);
+    minPercentInput.addEventListener('input', refreshStatus);
+    if (dashboardProfileFilterSelect) {
+      dashboardProfileFilterSelect.addEventListener('change', () => {
+        dashboardFilters.profile = dashboardProfileFilterSelect.value || 'all';
+        dashboardFilters.school = 'all';
+        renderDashboard();
+        saveState();
+      });
+    }
+    if (dashboardSchoolFilterSelect) {
+      dashboardSchoolFilterSelect.addEventListener('change', () => {
+        dashboardFilters.school = dashboardSchoolFilterSelect.value || 'all';
+        renderDashboard();
+        saveState();
+      });
+    }
+    if (dashboardProductTypeFilterSelect) {
+      dashboardProductTypeFilterSelect.addEventListener('change', () => {
+        dashboardFilters.productType = dashboardProductTypeFilterSelect.value || 'all';
+        renderDashboard();
+        saveState();
+      });
+    }
+    if (dashboardCourseFilterInput) {
+      dashboardCourseFilterInput.addEventListener('input', () => {
+        dashboardFilters.course = dashboardCourseFilterInput.value || '';
+        renderDashboard();
+        saveState();
+      });
+    }
+
+    startDateInput.addEventListener('change', recalcEndDate);
+    endDateInput.addEventListener('change', buildTable);
+
+    addCourseBtn.addEventListener('click', addCourse);
+    newCourseInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addCourse();
+    });
+    if (titleEl) titleEl.addEventListener('input', saveState);
+    [
+      fmtBg, fmtCard, fmtText, fmtLine, fmtHeader, fmtPanel,
+      fmtOk, fmtLate, fmtBar, fmtSchoolBar, fmtStatusNo, fmtStatusProgress, fmtStatusDone,
+      fmtFontSize, fmtRadius
+    ].forEach((input) => {
+      input.addEventListener('input', () => {
+        applyTheme(readThemeFromInputs());
+        saveState();
+      });
+    });
+    resetFormatBtn.addEventListener('click', () => {
+      applyTheme(DEFAULT_THEME);
+      syncThemeInputs(DEFAULT_THEME);
+      saveState();
+    });
+    if (toggleFormatBtn && formatPanel) {
+      toggleFormatBtn.addEventListener('click', () => {
+        const collapsed = formatPanel.classList.toggle('collapsed');
+        toggleFormatBtn.textContent = collapsed ? 'Mostrar formato' : 'Ocultar formato';
+        saveState();
+      });
+    }
+    if (resetProfileBtn) {
+      resetProfileBtn.addEventListener('click', () => {
+        const ok = window.confirm(`Resetear metas y reales del perfil ${currentProfile} a 0?`);
+        if (!ok) return;
+        courses.forEach((course) => {
+          realByCourse.set(course.id, new Array(TOTAL_WEEKS).fill(0));
+          targetByCourse.set(course.id, new Array(TOTAL_WEEKS).fill(0));
+          clampCourseArrays(course);
+        });
+        buildTable();
+        saveState();
+      });
+    }
+    if (connectSyncBtn) {
+      connectSyncBtn.addEventListener('click', () => {
+        initSupabaseSync({ fetchRemote: true }).catch((error) => {
+          setSyncStatus(`Sync error: ${error.message}`, true);
+        });
+      });
+    }
+    if (syncNowBtn) {
+      syncNowBtn.addEventListener('click', async () => {
+        try {
+          if (!supabaseClient) {
+            const connected = await initSupabaseSync({ fetchRemote: false });
+            if (!connected) return;
+          }
+          await pushStateToSupabase(buildStatePayload());
+        } catch (error) {
+          setSyncStatus(`Sync error: ${error.message}`, true);
+        }
+      });
+    }
+    [syncSupabaseUrlInput, syncSupabaseKeyInput, syncBoardIdInput].forEach((input) => {
+      if (!input) return;
+      input.addEventListener('input', () => {
+        saveSyncSettings();
+      });
+    });
+    if (fitWeeksBtn) {
+      fitWeeksBtn.addEventListener('click', () => {
+        fitWeeksEnabled = !fitWeeksEnabled;
+        applyTableFit();
+      });
+    }
+    if (exportJpgBtn) {
+      exportJpgBtn.addEventListener('click', async () => {
+        const tableEl = document.getElementById('ganttTable');
+        if (!tableEl || typeof html2canvas === 'undefined') return;
+        const originalText = exportJpgBtn.textContent;
+        exportJpgBtn.textContent = 'Exportando...';
+        exportJpgBtn.disabled = true;
+        try {
+          const previousZoom = tableEl.style.zoom;
+          tableEl.style.zoom = '1';
+          const canvas = await html2canvas(tableEl, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            useCORS: true
+          });
+          tableEl.style.zoom = previousZoom;
+          const link = document.createElement('a');
+          const date = new Date().toISOString().slice(0, 10);
+          const profileLabel = currentProfile === 'academico' ? 'academico' : 'productor';
+          link.download = `tabla-entregables-${profileLabel}-${date}.jpg`;
+          link.href = canvas.toDataURL('image/jpeg', 0.95);
+          link.click();
+        } catch (error) {
+          console.error('No se pudo exportar JPG:', error);
+          alert('No se pudo exportar el JPG.');
+        } finally {
+          exportJpgBtn.textContent = originalText;
+          exportJpgBtn.disabled = false;
+          applyTableFit();
+        }
+      });
+    }
+    window.addEventListener('resize', applyTableFit);
+    window.addEventListener('beforeunload', saveState);
+
+    const restored = loadState();
+    loadSyncSettings();
+    if (!restored) {
+      initDates();
+      applyTheme(DEFAULT_THEME);
+      syncThemeInputs(DEFAULT_THEME);
+    }
+    bindProfile('productor');
+    syncDashboardFilterInputs();
+    const activeView = restored ? restoredActiveTab : 'productor';
+    setActiveTab(activeView);
+    applyTableFit();
+    renderDashboard();
+    if (syncSettingsValid()) {
+      initSupabaseSync({ fetchRemote: true }).catch((error) => {
+        setSyncStatus(`Sync error: ${error.message}`, true);
+      });
+    } else {
+      setSyncStatus('Sync: solo localStorage');
+    }
+  </script>
+</body>
+</html>
