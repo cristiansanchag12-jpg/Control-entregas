@@ -815,7 +815,7 @@
         </div>
       </div>
 
-      <div class="sync-panel">
+      <div id="syncAdminPanel" class="sync-panel">
         <div class="field">
           <label for="syncSupabaseUrl">Supabase URL</label>
           <input id="syncSupabaseUrl" type="text" placeholder="https://TU-PROYECTO.supabase.co" value="https://ffqopubnqnmpnazcjdsr.supabase.co" />
@@ -972,6 +972,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script>
     const TOTAL_WEEKS = 15;
+    const SHOW_SYNC_UI = false;
     const DEFAULT_WEEKLY_TARGET = new Array(TOTAL_WEEKS).fill(0);
     const PRODUCT_TYPES = ['Grados', 'ECV', 'Lab Grados'];
     const PRODUCT_TYPE_WEEKS = {
@@ -1246,6 +1247,7 @@ Remozamiento de Curso ContadurÕa
     const tbody = document.getElementById('tbody');
     const planSummary = document.getElementById('planSummary');
     const tableWrap = document.getElementById('tableWrap');
+    const syncAdminPanel = document.getElementById('syncAdminPanel');
     const syncSupabaseUrlInput = document.getElementById('syncSupabaseUrl');
     const syncSupabaseKeyInput = document.getElementById('syncSupabaseKey');
     const syncBoardIdInput = document.getElementById('syncBoardId');
@@ -1335,6 +1337,11 @@ Remozamiento de Curso ContadurÕa
       if (!syncStatusEl) return;
       syncStatusEl.textContent = message;
       syncStatusEl.style.color = isError ? '#b91c1c' : 'var(--muted)';
+    }
+
+    function applySyncUiVisibility() {
+      if (syncAdminPanel) syncAdminPanel.style.display = SHOW_SYNC_UI ? 'grid' : 'none';
+      if (syncStatusEl) syncStatusEl.style.display = SHOW_SYNC_UI ? 'flex' : 'none';
     }
 
     async function ensureSupabaseFactory() {
@@ -2862,6 +2869,7 @@ Remozamiento de Curso ContadurÕa
 
     const restored = loadState();
     loadSyncSettings();
+    applySyncUiVisibility();
     if (!restored) {
       initDates();
       applyTheme(DEFAULT_THEME);
